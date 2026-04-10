@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
+
 import * as React from 'react';
 import { TextField, ITextFieldStyles} from '@fluentui/react';
 import { useBoolean } from '@fluentui/react-hooks';
 import { ControlInput } from './InputControl';
 import { getPrefixlocation , getElettricCode } from './getPrefixLocationAndElettricCode';
 import { IInputs, IOutputs } from "../generated/ManifestTypes";
+import { useMemo } from 'react';
 
 
 
@@ -28,9 +28,10 @@ const titleFieldStyles: Partial<ITextFieldStyles> = {
   fieldGroup: {
     width: '100%',
     minHeight: 35,
-    border: '1px solid transparent',
+    //border: '1px solid transparent',
     borderRadius: 2,
-    backgroundColor: '#f3f2f1',
+    border: "none",
+    backgroundColor: "transparent",
     boxSizing: 'border-box',
     selectors: {
       ':hover': {
@@ -53,6 +54,7 @@ const titleFieldStyles: Partial<ITextFieldStyles> = {
 
 const Control = (prop: dataToSend)=> {
     const [isCountryValid, { setTrue: validCountry, setFalse: invalidCountry }] = useBoolean(false);
+    const [isFocused, setIsFocused] = React.useState(false);
     const [vehicleRegistrationValue, setvehicleRegistrationValue] = React.useState<string>('');
     const [elettricFalgValue, SetelettricFalgValue] = React.useState<string>('');
     const [countryVehicleValue, setcountryVehicleValue] = React.useState<string>('');
@@ -85,6 +87,39 @@ const Control = (prop: dataToSend)=> {
     if (isValid) { validCountry() }
 }, [vehicleRegistrationValue,countryVehicleValue,elettricFalgValue,ArrayofprefixValue,validCountry,invalidCountry]);
 
+  const normalizedValue = vehicleRegistrationValue ?? "";
+  const Autofill = React.useMemo(() => {
+    if(!normalizedValue)  { return  "" }
+
+    return (
+      ArrayofprefixValue.find((item) => item.toUpperCase().startsWith(normalizedValue)) ?? ""
+    );
+  }, [normalizedValue, ArrayofprefixValue]);
+
+  const suggestedSuffix = 
+        Autofill &&
+        Autofill.length > normalizedValue.length &&
+        Autofill.toUpperCase().startsWith(normalizedValue.toUpperCase())
+        ? Autofill.substring(normalizedValue.length)
+        : "";
+
+  const acceptSuggestion = React.useCallback(() => {
+    if (!Autofill) return;
+    setvehicleRegistrationValue(Autofill);
+    prop.onValueChangeRegistration(Autofill);
+  }, [Autofill, prop.onValueChangeRegistration]);
+
+    const handleKeyDown = React.useCallback(
+      (ev: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        if (!suggestedSuffix) return;
+  
+        if (ev.key === "Tab" || ev.key === "ArrowRight") {
+          ev.preventDefault();
+          acceptSuggestion();
+        }
+      },
+      [suggestedSuffix, acceptSuggestion]
+    );
 
     const CheckOnchange = React.useCallback((value: string) :void => {
       const newVal = value.toUpperCase();
@@ -96,14 +131,55 @@ const Control = (prop: dataToSend)=> {
 
 
         return (
-        <div style={{ width: '100%', minWidth: 0, display: 'block' }}>
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        minHeight: 35,
+        border: isFocused ? "1px solid #8a8886" : "1px solid transparent",
+        borderRadius: 2,
+        backgroundColor: isFocused ? "#ffffff" : "#f3f2f1",
+        boxSizing: "border-box",
+      }}
+      onMouseEnter={(e) => {
+        if (!isFocused) {
+          (e.currentTarget.style.backgroundColor = "#edebe9");
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isFocused) {
+          (e.currentTarget.style.backgroundColor = "#f3f2f1");
+        }
+      }}
+    >
+          {/* Ghost text dietro al vero input */}
+ <div
+        style={{
+          position: "absolute",
+          left: 10,
+          right: 10,
+          top: "50%",
+          transform: "translateY(-50%)",
+          pointerEvents: "none",
+          whiteSpace: "pre",
+          overflow: "hidden",
+          fontSize: 14,
+          color: "#999",
+          zIndex: 1,
+        }}
+      >
+        <span style={{ visibility: "hidden" }}>{vehicleRegistrationValue}</span>
+        <span>{suggestedSuffix}</span>
+      </div>
             <TextField
                 invalid={!isCountryValid}
                 errorMessage={!isCountryValid ? "Targa non valida" : undefined}
                 value={vehicleRegistrationValue}
                 styles={titleFieldStyles}
                 onChange={(_, value) => CheckOnchange(value ?? "")} 
-                onBlur={() => prop.onValueChangeRegistration(vehicleRegistrationValue)}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => {prop.onValueChangeRegistration(vehicleRegistrationValue); setIsFocused(false)}}
             />
           </div>
         );

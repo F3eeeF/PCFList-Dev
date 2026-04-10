@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import * as React from "react";
 import { dataToSend, controlDisplay } from "./components/ControlDisplay";
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
