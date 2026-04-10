@@ -1,0 +1,32 @@
+per componente con react ->pac pcf init --namespace <Name> --name <nome progetto> --template field -fw react -npm 
+aggiungere al file manifest
+    <platform-library name="React" version="16.14.0" />
+    <platform-library name="Fluent" version="9.46.2" />
+
+senza react ->pac pcf init --namespace <Name> --name <nome progetto> -template field 
+
+
+al cambio del file manifest -> npm run build
+
+per debug -> npm start watch
+
+//PER IL DEPLOY
+
+se non abbiamo una connessione pac auth create --url “url dell’ambiente dynamics” 
+
+se abbiamo gia una connessione 
+pac auth list
+pac auth select --index "indice della connessione"
+pac pcf push --publisher-prefix <"prefisso">
+
+
+se dobbiamo creare il file zip
+
+creare una cartella "Nome PCF"Solution
+nella cartella creata usare il comando -> pac solution init --publisher-name <publisher-name> --publisher-prefix <prefix> 
+->pac solution add-reference --path <path-to-your-control-project-directory> 
+path-to-your-control-project-directory == path del tuo PCF
+
+aprire Developer command propmt VS 2022, navifare nella cartella della Solution e inserire -> msbuild /t:build /restore
+
+una volta creato lo zib importarlo nell-ambiente desiderato
