@@ -11,15 +11,16 @@ const COUNTRY = {
 }
 
 
-export const ControlInput = (value: string, country: string, elettricFlag : string, filterLocation: string[]) : boolean => {
+export const ControlInput = (value: string, country: string, elettricFlag : string, filterLocation: string[], prefix?: string) : boolean => {
     switch(country){
         case COUNTRY.CODE.DE :
             {
                 setPrefixLength(value, filterLocation);
-                const separetor = Number(localStorage.getItem("LocationPrefix"));
+                let separetor = Number(localStorage.getItem("LocationPrefix"));
                 if(value.length > 8) {return false}
                 //let isElectric = false;
                 //if(elettricFlag == "565220002" || elettricFlag == "565220001") {isElectric = true}
+                if(prefix) { separetor = prefix.length }
                 const subString = value.substring(separetor ?? 1);
                 if( (!/^[a-zA-Z]{2}/.test(subString))) {return false}
                 //if(isElectric && !subString.endsWith("E")) {return false}
@@ -28,10 +29,11 @@ export const ControlInput = (value: string, country: string, elettricFlag : stri
         case COUNTRY.CODE.AT :
             {
                 setPrefixLength(value, filterLocation);
-                const separetor = Number(localStorage.getItem("LocationPrefix"));
+                let separetor = Number(localStorage.getItem("LocationPrefix"));
+                if(prefix) { separetor = prefix.length }
                 const subString = value.substring(separetor ?? 2);
                 if(subString.length != 5){return false}
-                if((!/^[a-zA-Z]{1}[a-zA-Z0-9]{3}[0-9]{1}$/.test(subString))) {return false}
+                if((!/^[0-9]{1}[a-zA-Z0-9]{3}[a-zA-Z]{1}$/.test(subString))) {return false}
                 return true;
             }
         case COUNTRY.CODE.IT :

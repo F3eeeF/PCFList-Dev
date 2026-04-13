@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { TextField, ITextFieldStyles} from '@fluentui/react';
+import { TextField, ITextFieldStyles, Callout, List, DirectionalHint} from '@fluentui/react';
 import { useBoolean } from '@fluentui/react-hooks';
 import { ControlInput } from './InputControl';
 import { getPrefixlocation , getElettricCode } from './getPrefixLocationAndElettricCode';
@@ -58,7 +58,9 @@ const Control = (prop: dataToSend)=> {
     const [vehicleRegistrationValue, setvehicleRegistrationValue] = React.useState<string>('');
     const [elettricFalgValue, SetelettricFalgValue] = React.useState<string>('');
     const [countryVehicleValue, setcountryVehicleValue] = React.useState<string>('');
+    const [prefixFilteredValue, setprefixFilteredValue] = React.useState<string>('');
     const [ArrayofprefixValue, setArrayofprefixValue] = React.useState<string[]>([]);
+    const inputRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     setvehicleRegistrationValue((prop.vehicleRegistration ?? "").toUpperCase());
@@ -76,113 +78,108 @@ const Control = (prop: dataToSend)=> {
         SetelettricFalgValue(electricValue);
 
         const prefixes = await getPrefixlocation(prop._context, countryValue);
-        setArrayofprefixValue(prefixes);
+        setArrayofprefixValue(prefixes.sort());
     }
     void LoadData();
   }, [prop.countryVehicle, prop._context]);
 
   React.useEffect(() => {
-    const isValid = ControlInput(vehicleRegistrationValue,countryVehicleValue,elettricFalgValue,ArrayofprefixValue);
+    const isValid = ControlInput(vehicleRegistrationValue,countryVehicleValue,elettricFalgValue,ArrayofprefixValue, prefixFilteredValue);
     invalidCountry();
     if (isValid) { validCountry() }
-}, [vehicleRegistrationValue,countryVehicleValue,elettricFalgValue,ArrayofprefixValue,validCountry,invalidCountry]);
+  }, [vehicleRegistrationValue,countryVehicleValue,elettricFalgValue,ArrayofprefixValue,validCountry,invalidCountry, prefixFilteredValue]);
 
-  const normalizedValue = vehicleRegistrationValue ?? "";
-  const Autofill = React.useMemo(() => {
-    if(!normalizedValue)  { return  "" }
-
-    return (
-      ArrayofprefixValue.find((item) => item.toUpperCase().startsWith(normalizedValue)) ?? ""
-    );
-  }, [normalizedValue, ArrayofprefixValue]);
-
-  const suggestedSuffix = 
-        Autofill &&
-        Autofill.length > normalizedValue.length &&
-        Autofill.toUpperCase().startsWith(normalizedValue.toUpperCase())
-        ? Autofill.substring(normalizedValue.length)
-        : "";
-
-  const acceptSuggestion = React.useCallback(() => {
-    if (!Autofill) return;
-    setvehicleRegistrationValue(Autofill);
-    prop.onValueChangeRegistration(Autofill);
-  }, [Autofill, prop.onValueChangeRegistration]);
-
-    const handleKeyDown = React.useCallback(
-      (ev: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        if (!suggestedSuffix) return;
-  
-        if (ev.key === "Tab" || ev.key === "ArrowRight") {
-          ev.preventDefault();
-          acceptSuggestion();
-        }
-      },
-      [suggestedSuffix, acceptSuggestion]
-    );
 
     const CheckOnchange = React.useCallback((value: string) :void => {
       const newVal = value.toUpperCase();
       setvehicleRegistrationValue(newVal);
-      const validControl = ControlInput(newVal, countryVehicleValue, elettricFalgValue, ArrayofprefixValue)
+      
+      const detectedPrefix = findValidPrefix(newVal);
+      setprefixFilteredValue(detectedPrefix);
+
+      //const validControl = ControlInput(newVal, countryVehicleValue, elettricFalgValue, ArrayofprefixValue, prefix)
+      const validControl = ControlInput(newVal, countryVehicleValue, elettricFalgValue, ArrayofprefixValue, detectedPrefix);
       invalidCountry()
       if(validControl) { validCountry() }
-    }, [countryVehicleValue,elettricFalgValue,ArrayofprefixValue,validCountry,invalidCountry]);
+    }, [countryVehicleValue,elettricFalgValue,ArrayofprefixValue,validCountry,invalidCountry, prefixFilteredValue]);
+
+    const filteredPrefixes = React.useMemo(() => {
+      return ArrayofprefixValue.filter(prefix => prefix.startsWith(vehicleRegistrationValue));
+    }, [vehicleRegistrationValue, ArrayofprefixValue])
+
+    const changeDropDownList = React.useCallback((value: string) :void => {
+      if(!value) { return }
+      if((value.length > vehicleRegistrationValue.length) || (vehicleRegistrationValue.length == value.length) || (!vehicleRegistrationValue)) {
+        setvehicleRegistrationValue(value);
+      }
+      if(vehicleRegistrationValue.length > value.length) {
+        let startSplit = 0;
+        for(let i = 0; i < 4; i++){
+          const filter = ArrayofprefixValue.filter((elem: string) => elem == vehicleRegistrationValue.slice(0, i));
+          if(filter.length > 0) {startSplit = filter[0].length}
+          const split = vehicleRegistrationValue.substring(startSplit);
+          setvehicleRegistrationValue(`${value}${split}`);
+        }
+      }
+      setprefixFilteredValue(value);
+    }, [vehicleRegistrationValue, ArrayofprefixValue, setvehicleRegistrationValue, setprefixFilteredValue]) 
+
+    const findValidPrefix = React.useCallback((text: string): string => {
+      if (!text) return "";
+      const potentialMatches = ArrayofprefixValue.filter(p => text.startsWith(p));
+      const sortedMatches = [...potentialMatches].sort((a, b) => b.length - a.length);
+      for (const p of sortedMatches) {
+        if (ControlInput(text, countryVehicleValue, elettricFalgValue, ArrayofprefixValue, p)) {
+          return p; 
+        }
+      }
+      return sortedMatches.length > 0 ? sortedMatches[0] : "";
+    }, [ArrayofprefixValue, countryVehicleValue, elettricFalgValue]);
 
 
         return (
-    <div
-      style={{
-        position: "relative",
-        width: "100%",
-        minHeight: 35,
-        border: isFocused ? "1px solid #8a8886" : "1px solid transparent",
-        borderRadius: 2,
-        backgroundColor: isFocused ? "#ffffff" : "#f3f2f1",
-        boxSizing: "border-box",
-      }}
-      onMouseEnter={(e) => {
-        if (!isFocused) {
-          (e.currentTarget.style.backgroundColor = "#edebe9");
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isFocused) {
-          (e.currentTarget.style.backgroundColor = "#f3f2f1");
-        }
-      }}
-    >
-          {/* Ghost text dietro al vero input */}
- <div
-        style={{
-          position: "absolute",
-          left: 10,
-          right: 10,
-          top: "50%",
-          transform: "translateY(-50%)",
-          pointerEvents: "none",
-          whiteSpace: "pre",
-          overflow: "hidden",
-          fontSize: 14,
-          color: "#999",
-          zIndex: 1,
-        }}
-      >
-        <span style={{ visibility: "hidden" }}>{vehicleRegistrationValue}</span>
-        <span>{suggestedSuffix}</span>
-      </div>
-            <TextField
-                invalid={!isCountryValid}
-                errorMessage={!isCountryValid ? "Targa non valida" : undefined}
-                value={vehicleRegistrationValue}
-                styles={titleFieldStyles}
-                onChange={(_, value) => CheckOnchange(value ?? "")} 
-                onKeyDown={handleKeyDown}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => {prop.onValueChangeRegistration(vehicleRegistrationValue); setIsFocused(false)}}
-            />
+        <div style={{ width: '100%', minWidth: 0, display: 'block' }}>
+          <div ref={inputRef}>
+              <TextField
+              invalid={!isCountryValid}
+              errorMessage={!isCountryValid ? "Targa non valida" : undefined}
+              value={vehicleRegistrationValue}
+              styles={titleFieldStyles}
+              onChange={(_, value) => CheckOnchange(value ?? "")} 
+              onFocus={() => setIsFocused(true)}
+              onClick={() => setIsFocused(true)}
+              onBlur={() => {prop.onValueChangeRegistration(vehicleRegistrationValue); setIsFocused(false)}}
+              />
           </div>
-        );
+            {
+              isFocused && inputRef.current && (
+                <Callout
+                  target={inputRef.current}
+                  onDismiss={() => setIsFocused(false)}
+                  setInitialFocus={false}
+                  directionalHint={DirectionalHint.bottomLeftEdge}
+                  calloutWidth={inputRef.current?.clientWidth}
+                  isBeakVisible={false}
+                >
+                <div style={{ maxHeight: 200, overflowY: 'auto', padding: 4 }}>
+                  {
+                    filteredPrefixes.map((item) => (
+                      <div
+                        key={item}
+                        style={{ padding: '8px 12px', cursor: "pointer", borderBottom: '1px solid #f3f2f1'}}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {changeDropDownList(item) ; setIsFocused(false)}}
+                      >
+                      {item}
+                      </div>
+                    ))
+                  }
+                </div>
+                </Callout>
+              )
+            }
+        </div>
+      );
 }
 
 export const controlDisplay = React.memo(Control);
