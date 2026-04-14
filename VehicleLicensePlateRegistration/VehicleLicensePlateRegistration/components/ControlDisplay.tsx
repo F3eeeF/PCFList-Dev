@@ -3,7 +3,7 @@ import * as React from 'react';
 import { TextField, ITextFieldStyles, Callout, List, DirectionalHint} from '@fluentui/react';
 import { useBoolean } from '@fluentui/react-hooks';
 import { ControlInput } from './InputControl';
-import { getPrefixlocation , getElettricCode } from './getPrefixLocationAndElettricCode';
+import { getPrefixlocation  } from './getPrefixLocationCode';
 import { IInputs, IOutputs } from "../generated/ManifestTypes";
 import { useMemo } from 'react';
 
@@ -14,6 +14,7 @@ export interface dataToSend {
     vehicleRegistration: string;
     _context: ComponentFramework.Context<IInputs>
     countryVehicle: Promise<string | null> | undefined,
+    EletricOption: boolean,
     onValueChangeRegistration: (newVal: string) => void;
 }
 
@@ -28,10 +29,9 @@ const titleFieldStyles: Partial<ITextFieldStyles> = {
   fieldGroup: {
     width: '100%',
     minHeight: 35,
-    //border: '1px solid transparent',
+    border: '1px solid transparent',
     borderRadius: 2,
-    border: "none",
-    backgroundColor: "transparent",
+    backgroundColor: '#f3f2f1',
     boxSizing: 'border-box',
     selectors: {
       ':hover': {
@@ -55,49 +55,53 @@ const titleFieldStyles: Partial<ITextFieldStyles> = {
 const Control = (prop: dataToSend)=> {
     const [isCountryValid, { setTrue: validCountry, setFalse: invalidCountry }] = useBoolean(false);
     const [isFocused, setIsFocused] = React.useState(false);
-    const [vehicleRegistrationValue, setvehicleRegistrationValue] = React.useState<string>('');
-    const [elettricFalgValue, SetelettricFalgValue] = React.useState<string>('');
-    const [countryVehicleValue, setcountryVehicleValue] = React.useState<string>('');
-    const [prefixFilteredValue, setprefixFilteredValue] = React.useState<string>('');
+    const [vehicleRegistrationValue, setVehicleRegistrationValue] = React.useState<string>('');
+    const [elettricFalgValue, setElettricFlagValue] = React.useState<boolean>(false);
+    const [countryVehicleValue, setCountryVehicleValue] = React.useState<string>('');
+    const [prefixFilteredValue, setPrefixFilteredValue] = React.useState<string>('');
     const [ArrayofprefixValue, setArrayofprefixValue] = React.useState<string[]>([]);
     const inputRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
-    setvehicleRegistrationValue((prop.vehicleRegistration ?? "").toUpperCase());
+    setVehicleRegistrationValue((prop.vehicleRegistration ?? "").toUpperCase());
   }, [prop.vehicleRegistration]);
 
   React.useEffect(() => {
     const LoadData = async (): Promise<void> => {
         const countryValue = await prop.countryVehicle ?? "";
-        setcountryVehicleValue(countryValue);
+        setCountryVehicleValue(countryValue);
 
-        let electricValue = "";
+        let electricValue = false;
         if (countryValue === "DE") {
-            electricValue = await getElettricCode(prop._context);
+            //electricValue = await getElettricCode(prop._context);
+            electricValue = prop.EletricOption;
         }
-        SetelettricFalgValue(electricValue);
+        setElettricFlagValue(electricValue);
 
         const prefixes = await getPrefixlocation(prop._context, countryValue);
         setArrayofprefixValue(prefixes.sort());
     }
     void LoadData();
-  }, [prop.countryVehicle, prop._context]);
+
+  }, [prop.countryVehicle, prop._context, prop.EletricOption]);
 
   React.useEffect(() => {
-    const isValid = ControlInput(vehicleRegistrationValue,countryVehicleValue,elettricFalgValue,ArrayofprefixValue, prefixFilteredValue);
+    const detectedPrefix = findValidPrefix(vehicleRegistrationValue);
+    setPrefixFilteredValue(detectedPrefix);
+
+    const validControl = ControlInput(vehicleRegistrationValue,countryVehicleValue,elettricFalgValue,ArrayofprefixValue, prefixFilteredValue);
     invalidCountry();
-    if (isValid) { validCountry() }
-  }, [vehicleRegistrationValue,countryVehicleValue,elettricFalgValue,ArrayofprefixValue,validCountry,invalidCountry, prefixFilteredValue]);
+    if (validControl) { validCountry() }
+  }, [vehicleRegistrationValue,countryVehicleValue,elettricFalgValue,ArrayofprefixValue,validCountry,invalidCountry, prefixFilteredValue, prop.EletricOption]);
 
 
     const CheckOnchange = React.useCallback((value: string) :void => {
       const newVal = value.toUpperCase();
-      setvehicleRegistrationValue(newVal);
+      setVehicleRegistrationValue(newVal);
       
       const detectedPrefix = findValidPrefix(newVal);
-      setprefixFilteredValue(detectedPrefix);
+      setPrefixFilteredValue(detectedPrefix);
 
-      //const validControl = ControlInput(newVal, countryVehicleValue, elettricFalgValue, ArrayofprefixValue, prefix)
       const validControl = ControlInput(newVal, countryVehicleValue, elettricFalgValue, ArrayofprefixValue, detectedPrefix);
       invalidCountry()
       if(validControl) { validCountry() }
@@ -110,7 +114,7 @@ const Control = (prop: dataToSend)=> {
     const changeDropDownList = React.useCallback((value: string) :void => {
       if(!value) { return }
       if((value.length > vehicleRegistrationValue.length) || (vehicleRegistrationValue.length == value.length) || (!vehicleRegistrationValue)) {
-        setvehicleRegistrationValue(value);
+        setVehicleRegistrationValue(value);
       }
       if(vehicleRegistrationValue.length > value.length) {
         let startSplit = 0;
@@ -118,11 +122,11 @@ const Control = (prop: dataToSend)=> {
           const filter = ArrayofprefixValue.filter((elem: string) => elem == vehicleRegistrationValue.slice(0, i));
           if(filter.length > 0) {startSplit = filter[0].length}
           const split = vehicleRegistrationValue.substring(startSplit);
-          setvehicleRegistrationValue(`${value}${split}`);
+          setVehicleRegistrationValue(`${value}${split}`);
         }
       }
-      setprefixFilteredValue(value);
-    }, [vehicleRegistrationValue, ArrayofprefixValue, setvehicleRegistrationValue, setprefixFilteredValue]) 
+      setPrefixFilteredValue(value);
+    }, [vehicleRegistrationValue, ArrayofprefixValue, setVehicleRegistrationValue, setPrefixFilteredValue]) 
 
     const findValidPrefix = React.useCallback((text: string): string => {
       if (!text) return "";
@@ -149,6 +153,7 @@ const Control = (prop: dataToSend)=> {
               onFocus={() => setIsFocused(true)}
               onClick={() => setIsFocused(true)}
               onBlur={() => {prop.onValueChangeRegistration(vehicleRegistrationValue); setIsFocused(false)}}
+              //onLoad={(_, value) => CheckOnchange(value ?? "")}
               />
           </div>
             {

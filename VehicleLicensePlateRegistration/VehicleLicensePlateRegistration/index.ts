@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import * as React from "react";
 import { dataToSend, controlDisplay } from "./components/ControlDisplay";
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
@@ -37,17 +39,19 @@ export class VehicleLicensePlateRegistration implements ComponentFramework.React
         
         const vehicleRegistration = (context.parameters.ControlVehicleregistration?.raw ?? "".toLocaleUpperCase());
         const lookupValue = context.parameters.CountryVehicleRegistration?.raw;
+        const EletricOption = context.parameters.IsEletric?.raw;
         const _context = context;
         let countryVehicle;
         if (lookupValue && lookupValue.length > 0) {
             const record = lookupValue[0];
-            countryVehicle = this.getDataFetch(record, context)
+            countryVehicle = this.getDataLookup(record, context)
         }
 
         const props: dataToSend = {
             vehicleRegistration,
             _context,
             countryVehicle,
+            EletricOption,
             onValueChangeRegistration: this.handleReactRegistration,
         }
         return React.createElement(
@@ -58,7 +62,7 @@ export class VehicleLicensePlateRegistration implements ComponentFramework.React
         this._vehicleReg = newVal ?? "";
         this.notifyOutputChanged();
     }
-    private getDataFetch = async (data: ComponentFramework.LookupValue, context: ComponentFramework.Context<IInputs>) : Promise<string | null> => {
+    private getDataLookup = async (data: ComponentFramework.LookupValue, context: ComponentFramework.Context<IInputs>) : Promise<string | null> => {
         const result = await context.webAPI.retrieveRecord(
                 data.entityType,
                 data.id,

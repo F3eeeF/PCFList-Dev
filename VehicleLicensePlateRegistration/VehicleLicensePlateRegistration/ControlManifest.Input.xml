@@ -30,6 +30,14 @@
       usage="bound"
       required="false"
     />
+    <property 
+      name="IsEletric" 
+      display-name-key="IsEletric"
+      description-key="Option set for the Eletric flag"
+      of-type="TwoOptions"
+      usage="bound"
+      required="true"
+      />
     <!--
       Property node's of-type attribute can be of-type-group attribute.
       Example:
