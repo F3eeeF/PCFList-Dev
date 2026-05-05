@@ -11,7 +11,7 @@ const COUNTRY = {
 }
 
 
-export const ControlInput = (value: string, country: string, elettricFlag : boolean, filterLocation: string[], prefix?: string) : boolean => {
+export const ControlInput = (value: string, country: string, elettricFlag : number, filterLocation: string[], prefix?: string) : boolean => {
     switch(country){
         case COUNTRY.CODE.DE :
             {
@@ -21,7 +21,12 @@ export const ControlInput = (value: string, country: string, elettricFlag : bool
                 if(prefix) { separetor = prefix.length }
                 const subString = value.substring(separetor ?? 1);
                 if( (!/^[a-zA-Z]{2}/.test(subString))) {return false}
-                if(elettricFlag && !subString.endsWith("E")) {return false}
+                if((elettricFlag == 787640004) && !subString.endsWith("E")) {return false}
+                let lastCharposition = value.length;
+                if(elettricFlag == 787640004) {lastCharposition = -1}
+                const secondSubString = value.slice((separetor + 2), lastCharposition);
+                if(!secondSubString) {return false}
+                for(const char of secondSubString) { if(!/^[0-9]{1}/.test(char)) { return false} }
             }
             return true;
         case COUNTRY.CODE.AT :

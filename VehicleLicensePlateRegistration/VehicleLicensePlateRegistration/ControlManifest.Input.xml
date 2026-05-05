@@ -22,22 +22,26 @@
     </feature-usage>
     <!-- property node identifies a specific, configurable piece of data that the control expects from CDS -->
     <property name="ControlVehicleregistration" display-name-key="controllo targa" description-key="controllo sulla validita della targa" of-type="SingleLine.Text" usage="bound" required="true" />
-    <property
-      name="CountryVehicleRegistration"
-      display-name-key="Country"
-      description-key="Country where the car is registered"
-      of-type="Lookup.Simple"
-      usage="bound"
-      required="false"
-    />
     <property 
       name="IsEletric" 
       display-name-key="IsEletric"
       description-key="Option set for the Eletric flag"
-      of-type="TwoOptions"
+      of-type="OptionSet"
       usage="bound"
       required="true"
       />
+      <property name="Country" 
+          display-name-key="Tipo di Country" 
+          description-key="Seleziona una delle 4 opzioni per il Country" 
+          of-type="Enum" 
+          usage="input" 
+          required="true">
+
+      <value name="IT" display-name-key="Italia">IT</value>
+      <value name="AT" display-name-key="Austria">AT</value>
+      <value name="SH" display-name-key="Svizzera">SH</value>
+      <value name="DE" display-name-key="Germania">DE</value>
+    </property>
     <!--
       Property node's of-type attribute can be of-type-group attribute.
       Example:

@@ -13,8 +13,8 @@ import { useMemo } from 'react';
 export interface dataToSend {
     vehicleRegistration: string;
     _context: ComponentFramework.Context<IInputs>
-    countryVehicle: Promise<string | null> | undefined,
-    EletricOption: boolean,
+    countryVehicle: string,
+    EletricOption: number,
     onValueChangeRegistration: (newVal: string) => void;
 }
 
@@ -53,10 +53,10 @@ const titleFieldStyles: Partial<ITextFieldStyles> = {
 //-------------------------------------STYLE-------------------------------------//
 
 const Control = (prop: dataToSend)=> {
-    const [isCountryValid, { setTrue: validCountry, setFalse: invalidCountry }] = useBoolean(false);
+    const [isCountryValid, { setTrue: validCountry, setFalse: invalidCountry }] = useBoolean(true);
     const [isFocused, setIsFocused] = React.useState(false);
     const [vehicleRegistrationValue, setVehicleRegistrationValue] = React.useState<string>('');
-    const [elettricFalgValue, setElettricFlagValue] = React.useState<boolean>(false);
+    const [elettricFalgValue, setElettricFlagValue] = React.useState<number>(0);
     const [countryVehicleValue, setCountryVehicleValue] = React.useState<string>('');
     const [prefixFilteredValue, setPrefixFilteredValue] = React.useState<string>('');
     const [ArrayofprefixValue, setArrayofprefixValue] = React.useState<string[]>([]);
@@ -68,10 +68,10 @@ const Control = (prop: dataToSend)=> {
 
   React.useEffect(() => {
     const LoadData = async (): Promise<void> => {
-        const countryValue = await prop.countryVehicle ?? "";
+        const countryValue = prop.countryVehicle ?? "";
         setCountryVehicleValue(countryValue);
 
-        let electricValue = false;
+        let electricValue = 0;
         if (countryValue === "DE") {
             //electricValue = await getElettricCode(prop._context);
             electricValue = prop.EletricOption;
@@ -90,7 +90,7 @@ const Control = (prop: dataToSend)=> {
     setPrefixFilteredValue(detectedPrefix);
 
     const validControl = ControlInput(vehicleRegistrationValue,countryVehicleValue,elettricFalgValue,ArrayofprefixValue, prefixFilteredValue);
-    invalidCountry();
+    if(vehicleRegistrationValue.length >= 1) {invalidCountry();}
     if (validControl) { validCountry() }
   }, [vehicleRegistrationValue,countryVehicleValue,elettricFalgValue,ArrayofprefixValue,validCountry,invalidCountry, prefixFilteredValue, prop.EletricOption]);
 
@@ -103,7 +103,8 @@ const Control = (prop: dataToSend)=> {
       setPrefixFilteredValue(detectedPrefix);
 
       const validControl = ControlInput(newVal, countryVehicleValue, elettricFalgValue, ArrayofprefixValue, detectedPrefix);
-      invalidCountry()
+      if(vehicleRegistrationValue.length >= 1) {invalidCountry();}
+      
       if(validControl) { validCountry() }
     }, [countryVehicleValue,elettricFalgValue,ArrayofprefixValue,validCountry,invalidCountry, prefixFilteredValue]);
 
@@ -143,17 +144,17 @@ const Control = (prop: dataToSend)=> {
 
         return (
         <div style={{ width: '100%', minWidth: 0, display: 'block' }}>
+          
           <div ref={inputRef}>
               <TextField
-              invalid={!isCountryValid}
-              errorMessage={!isCountryValid ? "Targa non valida" : undefined}
+              //invalid={vehicleRegistrationValue.length >= 9}
+              errorMessage={!isCountryValid ? "Vehicle License Plate Registration not valid" :  (vehicleRegistrationValue.length >= 9 ? "Vehicle License Plate Registration not valid" :undefined)}
               value={vehicleRegistrationValue}
               styles={titleFieldStyles}
               onChange={(_, value) => CheckOnchange(value ?? "")} 
               onFocus={() => setIsFocused(true)}
               onClick={() => setIsFocused(true)}
               onBlur={() => {prop.onValueChangeRegistration(vehicleRegistrationValue); setIsFocused(false)}}
-              //onLoad={(_, value) => CheckOnchange(value ?? "")}
               />
           </div>
             {

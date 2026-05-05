@@ -7,15 +7,17 @@ import { TextField, ITextFieldStyles, DefaultButton, IButtonStyles} from '@fluen
 import { useBoolean } from '@fluentui/react-hooks';
 import { Decoder } from '../service/VINDecoder';
 import { CheckVerificationVIN } from './CheckverificationVIN';
+import { IInputs, IOutputs } from "../generated/ManifestTypes";
 
 
 //-------------------------------------INTERFACE-------------------------------------//
 export interface dataToSend {
+    _context: ComponentFramework.Context<IInputs>;
     VIN: string;
-    filter: string,
     API: string,
     flag : boolean;
     onValueChangeVIN: (newValVID: string) => void;
+    onValueChangeJson: (newjsonVla: string) => void;
 }
 
 //-------------------------------------STYLE-------------------------------------//
@@ -55,10 +57,13 @@ const titleFieldStyles: Partial<ITextFieldStyles> = {
 
 const ShowDetails = (props: dataToSend)=> {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const lastPopupVinRef = React.useRef<string | null>(null);
   const [VINValue, setVINValue] = React.useState<string>('');
   const [APIValue, setAPIValue] = React.useState<string>('');
   const [isTextVisible, { setTrue: showText, setFalse: hideText }] = useBoolean(false);
 
+
+  const filterForVIN = "License Plate,Make,Model Name,Model Year,Registered,Color,Vehicle Specification,Gross List Price,Vehicle Tax (monthly),Emission Standard,Average CO2 Emissions (g/km),Fuel Type - Primary,Fuel Type - Secondary,Displacement (ccm),Max. Power Output (kW),Transmission Type,Drive,Height (mm),Length (mm),Width (mm),Weight without driver (kg)"
 
   React.useEffect(() => {
     setVINValue(props.VIN);
@@ -83,39 +88,63 @@ const ShowDetails = (props: dataToSend)=> {
       const jsonString = await Decoder(VINValue);
       const jsonObj = JSON.parse(jsonString);
       const jsonData = (jsonObj.data ?? {});
-      const filterArray = props.filter.split(",");
+      const filterArray = filterForVIN.split(",");
       const result = filterArray.map(key => {
           const value = jsonData[key] ?? ""
-          if(!value) {return "";}
+          if(!value) {return `${key} : undefined`;}
           return `${key} : ${value}` 
         }).filter(item => item != null).join("\n");
       
+      props.onValueChangeJson(result);
+      props.onValueChangeVIN(VINValue)
       setAPIValue(result);
     }
     void loadJson();
-  }, [ setAPIValue, APIValue, VINValue]);
+  }, [ setAPIValue, APIValue, VINValue, props.onValueChangeJson, props.onValueChangeVIN]);
+  
+
+  const ShowInvalidVinPopup = React.useCallback((vin: string): void => {
+    void props._context.navigation.openAlertDialog(
+        {
+          text: `VIN non valido\nIl VIN inserito non è valido: ${vin}\ninserire un Vin valido`,
+          confirmButtonLabel: "OK"
+        },
+        {
+          width: 450,
+          height: 180
+        }
+      );
+  }, [props._context]);
+
+  const HandleVinBlur = React.useCallback((vinValue: string): void => {
+    const vin = vinValue.trim().toUpperCase() ?? "";
+    if (!vin) {
+      return;
+    }
+    const isInvalidVin = !CheckVerificationVIN(vin);
+    if (isInvalidVin) {
+      hideText();
+      if (lastPopupVinRef.current === vin) {
+        return;
+      }
+      lastPopupVinRef.current = vin;
+      ShowInvalidVinPopup(vin);
+      return;
+    }
+
+    lastPopupVinRef.current = null;
+}, [VINValue, hideText, ShowInvalidVinPopup]);
 
     return (
         <div style={{ width: '100%', minWidth: 0, display: 'block' }}>
+            
             <TextField
             invalid={!CheckVerificationVIN(VINValue)}
-            errorMessage={!CheckVerificationVIN(VINValue) ? "VIN non valido" : undefined}
+            //errorMessage={!CheckVerificationVIN(VINValue) ? "VIN non valido" : undefined}
             value={VINValue}
             styles={titleFieldStyles}
-            onChange={(_, value) => SetOnchange(value ?? "") }         
+            onChange={(_, value) => { SetOnchange(value ?? ""); if(value?.length == 17) {HandleVinBlur(value)} } }        
           />
-          {isTextVisible && 
-          <div ref={containerRef} style={{ width: '100%', minWidth: 0, display: 'block' , maxHeight: '300px', overflowY: 'scroll' }}>
-            {isTextVisible && 
-            <TextField
-                multiline 
-                autoAdjustHeight 
-                scrollContainerRef={containerRef}
-                value={APIValue}
-                styles={titleFieldStyles}
-                readOnly
-            />}
-          </div>}
         </div>
     )
 }

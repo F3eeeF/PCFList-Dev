@@ -1,20 +1,22 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
-import { dataToSend, displayDitails } from "./components/ShowDetails";
-import { CheckVerificationVIN } from "./components/CheckverificationVIN";
+import { dataToSend, mergeData } from "./components/mergeData";
+import { getAttributeFromRecord } from "./components/getDataFetch";
 import * as React from "react";
 
-export class ShowVehicleDetails implements ComponentFramework.ReactControl<IInputs, IOutputs> {
-    private notifyOutputChanged: () => void;
-    private _vehicleIdentificationNumber?: string;
-    private _APIResultJson?: string;
+ 
+export class FieldMerge implements ComponentFramework.ReactControl<IInputs, IOutputs> {
 
-    /**
-     * Empty constructor.
-     */
+    private _context: ComponentFramework.Context<IInputs>; 
+    private _state: ComponentFramework.Dictionary; 
+    private _notifyOutputChanged: () => void;
+    private _container: HTMLDivElement;
+    private _mergedString: string;
+    //private _inputElement: HTMLAreaElement;
+
     constructor() {
-        // Empty
+        // <Empty>
     }
 
     /**
@@ -27,9 +29,13 @@ export class ShowVehicleDetails implements ComponentFramework.ReactControl<IInpu
     public init(
         context: ComponentFramework.Context<IInputs>,
         notifyOutputChanged: () => void,
-        state: ComponentFramework.Dictionary
+        state: ComponentFramework.Dictionary,
+        container : HTMLDivElement 
     ): void {
-        this.notifyOutputChanged = notifyOutputChanged;
+        this._notifyOutputChanged = notifyOutputChanged;
+        this._container = container;
+        this._context = context;
+        this._state = state;
     }
 
     /**
@@ -38,29 +44,31 @@ export class ShowVehicleDetails implements ComponentFramework.ReactControl<IInpu
      * @returns ReactElement root react element for the control
      */
     public updateView(context: ComponentFramework.Context<IInputs>): React.ReactElement {
-        const VIN = (context.parameters.vehicleIdentificationNumber?.raw ?? "").toUpperCase();
-        const API = "";
-        const _context = context;
-        const props : dataToSend = {
-            _context,
-            VIN,
-            API,
-            flag,
-            onValueChangeVIN : this.handleReactVIN,
-            onValueChangeJson: this.onValueChangeJson,
-        };
+        const dataToFetch = context.parameters.arrayParam?.raw ?? "";
+        const dataRecord = getAttributeFromRecord(context, String(dataToFetch).split(","));
+        const props: dataToSend = {
+            dataRecord,
+            onValueChange: this.handleReactData,
+            firstSeparator: this.normalizeSeparator(true, context) ?? "",
+            secondSeparator: this.normalizeSeparator(false, context) ?? ""
+        }
         return React.createElement(
-            displayDitails, props
+            mergeData, props
         );
     }
-    private handleReactVIN = (newValVID: string): void =>{
-        this._vehicleIdentificationNumber = newValVID ?? "";
-        this.notifyOutputChanged();
+
+    private normalizeSeparator(first: boolean, context: ComponentFramework.Context<IInputs>): string {
+        if(first) {
+            return `${context.parameters.firstDivider?.raw ?? ""}${context.parameters.useSpacesBetweenFirstValue?.raw === true ? " " : ""}`
+        }
+        else {
+         return `${context.parameters.secondDivider?.raw ?? ""}${context.parameters.useSpacesBetweenSecondValue?.raw === true ? " " : ""}`   
+        }
     }
 
-    private onValueChangeJson = (newjsonVla: string): void =>{
-        this._APIResultJson = newjsonVla ?? "";
-        this.notifyOutputChanged();
+    private handleReactData = (newVal: string): void => {
+        this._mergedString = newVal;
+        this._notifyOutputChanged();
     }
 
     /**
@@ -68,7 +76,7 @@ export class ShowVehicleDetails implements ComponentFramework.ReactControl<IInpu
      * @returns an object based on nomenclature defined in manifest, expecting object[s] for property marked as "bound" or "output"
      */
     public getOutputs(): IOutputs {
-        return { vehicleIdentificationNumber: this._vehicleIdentificationNumber , APIResultJson: this._APIResultJson};
+        return { result: this._mergedString};
     }
 
     /**

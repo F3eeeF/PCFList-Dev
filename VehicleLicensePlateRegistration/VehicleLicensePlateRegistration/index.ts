@@ -38,14 +38,14 @@ export class VehicleLicensePlateRegistration implements ComponentFramework.React
     public updateView(context: ComponentFramework.Context<IInputs>): React.ReactElement {
         
         const vehicleRegistration = (context.parameters.ControlVehicleregistration?.raw ?? "".toLocaleUpperCase());
-        const lookupValue = context.parameters.CountryVehicleRegistration?.raw;
-        const EletricOption = context.parameters.IsEletric?.raw;
+        const countryVehicle = context.parameters.Country?.raw ?? "";
+        const EletricOption = context.parameters.IsEletric?.raw ?? 0;
         const _context = context;
-        let countryVehicle;
-        if (lookupValue && lookupValue.length > 0) {
-            const record = lookupValue[0];
-            countryVehicle = this.getDataLookup(record, context)
-        }
+        // let countryVehicle;
+        // if (lookupValue && lookupValue.length > 0) {
+        //     const record = lookupValue[0];
+        //     countryVehicle = this.getDataLookup(record, context)
+        // }
 
         const props: dataToSend = {
             vehicleRegistration,
@@ -62,14 +62,14 @@ export class VehicleLicensePlateRegistration implements ComponentFramework.React
         this._vehicleReg = newVal ?? "";
         this.notifyOutputChanged();
     }
-    private getDataLookup = async (data: ComponentFramework.LookupValue, context: ComponentFramework.Context<IInputs>) : Promise<string | null> => {
-        const result = await context.webAPI.retrieveRecord(
-                data.entityType,
-                data.id,
-                "?$select=emd_isoalpha2"
-            )
-            return (result as ComponentFramework.WebApi.Entity & { emd_isoalpha2?: string }).emd_isoalpha2 ?? null;
-    }
+    // private getDataFuelType = async (data: ComponentFramework.LookupValue, context: ComponentFramework.Context<IInputs>) : Promise<string | null> => {
+    //     const result = await context.webAPI.retrieveRecord(
+    //             data.entityType,
+    //             data.id,
+    //             "?$select=emd_fueltype_primary"
+    //         )
+    //         return (result as ComponentFramework.WebApi.Entity & { emd_fueltype_primary?: string }).emd_fueltype_primary ?? null;
+    // }
 
     /**
      * It is called by the framework prior to a control receiving new data.
